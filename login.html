@@ -95,11 +95,32 @@
     const { data, error } = await db.auth.signUp({ email, password: pass })
     if (error) { showAlert(error.message); btn.textContent = 'Créer mon compte'; return }
 
-    if (data.user) {
-      await db.from('profiles').insert({ id: data.user.id, name, couple_id: coupleId, color: 'green' })
+    const userId = data.user?.id
+    if (!userId) {
       showAlert('✅ Compte créé ! Vérifie ton email puis connecte-toi.', 'ok')
       switchMode('login')
+      btn.textContent = 'Créer mon compte'
+      return
     }
+
+    // Crée le profil tout de suite (fonctionne que la confirmation soit activée ou non)
+    const { error: profileError } = await db.from('profiles').insert({
+      id: userId, name, couple_id: coupleId, color: 'green'
+    })
+
+    // Si confirmation email désactivée → session déjà active → redirection directe
+    if (data.session) {
+      window.location.href = 'index.html'
+      return
+    }
+
+    // Sinon → confirmation email requise
+    if (profileError) {
+      showAlert('Compte créé mais erreur profil : ' + profileError.message)
+    } else {
+      showAlert('✅ Compte créé ! Vérifie ton email puis connecte-toi.', 'ok')
+    }
+    switchMode('login')
     btn.textContent = 'Créer mon compte'
   }
 </script>
